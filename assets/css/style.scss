@@ -10,3 +10,13 @@ $tab-count: {{ site.tabs | size | plus: 1 }}; // plus 1 for home tab
 @import "{{ site.theme }}";
 
 /* append your custom style below */
+table.center {
+  margin-left:auto;
+  margin-right:auto;
+  text-align:center;
+}
+
+th {
+  border-bottom: 3px solid black;
+  padding: 4px 6px;
+}
