@@ -1,7 +1,7 @@
 ---
 title: (2/3) single fp32 perceptron
 author: haroun7
-date: 2023-10-13 11:33:00 +0800
+date: 2023-11-22 11:33:00 +0800
 math: true
 mermaid: true
 ---
@@ -102,10 +102,21 @@ Figure 2: Weights and Biases per step as learning rate changes. Orange line indi
 ![Weights and Biases per step as batch size changes](/assets/images/perceptron2/trajectory_bs.png)
 Figure 3: Weights and Biases per step as batch size changes. Orange line indicates weight and bias such that $weight * threshold + bias = 0$. The intuition is much like Figure 2 except that instead of small learning rate, we have large batch size that prevents convergence. Why does this happen? The expected loss is the same for all batch sizes, right? There are some references [1](https://stats.stackexchange.com/questions/164876/what-is-the-trade-off-between-batch-size-and-number-of-iterations-to-train-a-neu), [2](https://stats.stackexchange.com/questions/316464/how-does-batch-size-affect-convergence-of-sgd-and-why), [3](https://wandb.ai/ayush-thakur/dl-question-bank/reports/What-s-the-Optimal-Batch-Size-to-Train-a-Neural-Network---VmlldzoyMDkyNDU#:~:text=However%2C%20for%20a%20non%2Dconvex,converge%20on%20the%20optimal%20solution.). In our case, we notice that the learning curves are tending towards the "correct" solution, so perhaps its because we simply did not do enough steps.
 
-> NOTE: unpopular opinion: SGD is sample inefficient as evidenced by Figure 2 and 3 - many choices of hyper-parameters simply don't converge as fast as they could.
+# Weight Decay
+Note that the plots above in Figure 3 have no weight decay - hence we observe that weights continue to just increase in magnitude. This is inevitable since there is no regularization to counter the saturation of sigmoid, so SGD will try to get past saturation of sigmoid.
 
+We repeated the experiments with weight decay turned on, and trajectories are provided in Figure 4 below.
+
+
+![Weights and Biases per step as batch size changes](/assets/images/perceptron2/full_graph_n16384.png)
+Figure 4: Line plot of weight and bias trajectories for different hyperparameters indicated by plot titles: (orange) acceptable weight/bias per setting. (blue) Weights and Biases per step. Each row is a fixed weight decay value, increasing from 0.01 to 2.0. Each column is a combination of batch size and learning rate. The pairs are [(0.05, 0.01), (0.05, 0.1), (0.01, 0.5), (0.05, 0.5), (0.25, 0.5), (0.05, 1.0), (0.01, 2.0)]. This is a lot of data and the tl;dr is the if weight decay is too high, it won't converge. A
 
 # on floats
-So far we've treated these numbers are real numbers rather than their implementation - floating point numbers. For those familiar with [numerical stability](https://en.wikipedia.org/wiki/Numerical_stability), issues around floating point numbers and the gradient update step we described earlier are somewhat clear - we run risks of [underflow](https://en.wikipedia.org/wiki/Arithmetic_underflow#:~:text=The%20term%20arithmetic%20underflow%20(also,central%20processing%20unit%20(CPU).) and other numerical errors. That said, SGD as an algorithm is numerically stable.
+In our investigations thus far, we're dealt with functions defined on real numbers, and used floating point approximations for these. While usage of floating point opens a route to [numerical stability](https://en.wikipedia.org/wiki/Numerical_stability), such as [underflow](https://en.wikipedia.org/wiki/Arithmetic_underflow), SGD as an algorithm is numerically stable. Going a few levels deeper, floating point numbers are still composed of bits. Modern floats such as fp8, fp16, fp32 use their bits to represent three things: a sign bit, an exponent and a mantissa. This is true also of specialized formats such as [bfloat16](https://en.wikipedia.org/wiki/Bfloat16_floating-point_format) and [fp8 for deep learning](https://arxiv.org/pdf/2209.05433.pdf).
 
-In this section, we will ignore that our algorithm is dealing with real numbers. Instead, we treat floats as a bunch of bits. Consequently, arithmetic is just a collection of weird circuits. For example, 32 bit floating point operations are described [here](https://digitalsystemdesign.in/floating-point-multiplication/).
+While floating point arithmetic is slower than integer arithmetic, they're not as far behind as they used to be [[1]](https://scicomp.stackexchange.com/questions/30353/integer-operations-vs-floating-point-operations). Further, the stackoverflow post claims that lot of today's (~2018) problems  data access is the actual bottleneck rather than FLOPS or IPS.
+
+Eitherway, if we think of floating point format as domain information, we should at least be aware of what it is doing. We visualize this in Figure 5.
+
+![Bit plots](/assets/images/perceptron2/output_image_2.png)
+Figure 5: A grid of images where top two rows are weight and bias over time, and lower two images are bit representations for each timestep - blue indicates value is 1, white is 0. The weight and bias trajectories are selected from Figures 1-4 above. I tried to pick a representative set - some where it converges, some where it doesn't, however there are limitations to this experiment: we don't cover realistic models at all. We will go into that in a later series.
